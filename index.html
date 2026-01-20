@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Jamrud Model School</title>
+
+    <!-- Google Fonts: Playfair (Headings) & Plus Jakarta Sans (Body) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            maroon: '#7f1d1d',   /* Deep Red/Maroon */
+                            gold: '#b45309',     /* Elegant Gold */
+                            cream: '#fffbeb',    /* Warm Background */
+                            dark: '#1f2937',     /* Text Dark */
+                            gray: '#f3f4f6'      /* Section Gray */
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+                        serif: ['"Playfair Display"', 'serif'],
+                    },
+                    animation: {
+                        'fade-in': 'fadeIn 0.6s ease-out forwards',
+                        'slide-up': 'slideUp 0.6s ease-out forwards',
+                        'bounce-slow': 'bounce 3s infinite',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        },
+                        slideUp: {
+                            '0%': { opacity: '0', transform: 'translateY(20px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Import Map (React & Firebase) -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.2.0",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"
+        }
+    }
+    </script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { 
+            background-color: #f9fafb; 
+            scroll-behavior: smooth;
+        }
+        .glass-nav {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .hero-pattern {
+            background-image: radial-gradient(#7f1d1d 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.05;
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #b45309; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #7f1d1d; }
+    </style>
+</head>
+<body class="text-gray-700 font-sans antialiased flex flex-col min-h-screen selection:bg-brand-maroon selection:text-white">
+    
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+        import { 
+            LogIn, FileText, Download, Phone, Send, MapPin, 
+            GraduationCap, Menu, X, ChevronDown, Calendar, 
+            BookOpen, Users, Award, Bell, Clock, ArrowRight, Loader2, Search, CheckCircle, AlertCircle, ExternalLink, Eye, LayoutList 
+        } from 'lucide-react';
+
+        // --- FIREBASE CONFIG ---
+        import { initializeApp } from 'firebase/app';
+        import { getFirestore, collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6lWn5wZAPYccdMk103QtV0bqVrWyNhWs",
+            authDomain: "chatting-4e6ae.firebaseapp.com",
+            databaseURL: "https://chatting-4e6ae-default-rtdb.firebaseio.com",
+            projectId: "chatting-4e6ae",
+            storageBucket: "chatting-4e6ae.appspot.com",
+            messagingSenderId: "592640983233",
+            appId: "1:592640983233:web:74dc627588f2b1a3ee9440"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- UI COMPONENTS ---
+
+        const SplashScreen = ({ onComplete }) => {
+            useEffect(() => {
+                const timer = setTimeout(() => onComplete(), 2000);
+                return () => clearTimeout(timer);
+            }, []);
+            return (
+                <div className="fixed inset-0 bg-brand-cream z-[9999] flex flex-col justify-center items-center">
+                     <div className="relative">
+                         <div className="absolute inset-0 bg-brand-maroon/10 rounded-full animate-ping"></div>
+                         <GraduationCap className="w-20 h-20 text-brand-maroon relative z-10" />
+                     </div>
+                     <h1 className="text-3xl font-serif font-bold text-gray-900 mt-6 tracking-tight">The Jamrud</h1>
+                     <p className="text-xs uppercase tracking-[0.3em] text-brand-gold font-bold mt-2">Model School</p>
+                     <Loader2 className="w-5 h-5 text-gray-400 mt-8 animate-spin" />
+                </div>
+            );
+        };
+
+        const Button = ({ children, icon: Icon, variant = 'primary', className = '', ...props }) => {
+            const variants = {
+                primary: "bg-brand-maroon text-white hover:bg-red-900 shadow-lg hover:shadow-xl hover:-translate-y-0.5",
+                secondary: "bg-white text-brand-maroon border-2 border-brand-maroon hover:bg-brand-maroon hover:text-white",
+                accent: "bg-brand-gold text-white hover:bg-amber-700 shadow-md",
+                ghost: "bg-transparent text-gray-600 hover:text-brand-maroon hover:bg-gray-100"
+            };
+            return (
+                <button className={`inline-flex items-center justify-center px-6 py-3 rounded-full font-semibold transition-all duration-300 ${variants[variant]} ${className}`} {...props}>
+                    {Icon && <Icon className="w-5 h-5 mr-2" />} {children}
+                </button>
+            );
+        };
+
+        const Navbar = () => {
+            const [isOpen, setIsOpen] = useState(false);
+            const location = useLocation();
+            
+            const NavLink = ({ to, label }) => (
+                <Link to={to} className={`text-sm font-semibold tracking-wide transition-colors duration-200 ${location.pathname === to ? 'text-brand-maroon' : 'text-gray-600 hover:text-brand-maroon'}`}>
+                    {label}
+                </Link>
+            );
+
+            return (
+                <nav className="sticky top-0 z-50 glass-nav w-full">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <div className="flex items-center justify-between h-20">
+                            {/* Logo */}
+                            <Link to="/" className="flex items-center space-x-3 group">
+                                <div className="bg-brand-maroon p-2 rounded-lg text-white shadow-md group-hover:scale-105 transition-transform">
+                                    <GraduationCap className="w-6 h-6" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-serif text-xl font-bold text-gray-900 leading-none">THE JAMRUD</span>
+                                    <span className="text-[10px] uppercase text-brand-gold font-bold tracking-[0.2em]">Model School</span>
+                                </div>
+                            </Link>
+                            
+                            {/* Desktop Navigation */}
+                            <div className="hidden md:flex items-center space-x-8">
+                                <NavLink to="/" label="Home" />
+                                <NavLink to="/classes" label="Classes" />
+                                <NavLink to="/exams" label="Results" />
+                                <NavLink to="/syllabus" label="Syllabus" />
+                                
+                                {/* Dropdown */}
+                                <div className="relative group py-6 cursor-pointer">
+                                    <span className="flex items-center text-sm font-semibold text-gray-600 hover:text-brand-maroon transition-colors">
+                                        More <ChevronDown className="w-4 h-4 ml-1 group-hover:rotate-180 transition-transform"/>
+                                    </span>
+                                    <div className="absolute right-0 top-16 w-48 bg-white rounded-xl shadow-xl py-2 hidden group-hover:block border border-gray-100 animate-slide-up">
+                                        <Link to="/datesheet" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-maroon font-medium">Datesheet</Link>
+                                        <Link to="/contact" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 hover:text-brand-maroon font-medium">Contact Us</Link>
+                                    </div>
+                                </div>
+
+                                <Link to="/portal">
+                                    <button className="bg-gray-900 text-white px-5 py-2 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors shadow-lg">
+                                        Portal
+                                    </button>
+                                </Link>
+                            </div>
+
+                            {/* Mobile Toggle */}
+                            <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-gray-800 p-2">
+                                {isOpen ? <X /> : <Menu />}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Mobile Menu */}
+                    {isOpen && (
+                        <div className="md:hidden bg-white border-t border-gray-100 absolute w-full shadow-xl z-40">
+                            <div className="px-6 py-8 space-y-4 flex flex-col">
+                                <Link to="/" onClick={() => setIsOpen(false)} className="text-lg font-medium text-gray-800 hover:text-brand-maroon">Home</Link>
+                                <Link to="/classes" onClick={() => setIsOpen(false)} className="text-lg font-medium text-gray-800 hover:text-brand-maroon">Classes</Link>
+                                <Link to="/exams" onClick={() => setIsOpen(false)} className="text-lg font-medium text-gray-800 hover:text-brand-maroon">Results</Link>
+                                <Link to="/syllabus" onClick={() => setIsOpen(false)} className="text-lg font-medium text-gray-800 hover:text-brand-maroon">Syllabus</Link>
+                                <Link to="/datesheet" onClick={() => setIsOpen(false)} className="text-lg font-medium text-gray-800 hover:text-brand-maroon">Datesheet</Link>
+                                <Link to="/contact" onClick={() => setIsOpen(false)} className="text-lg font-medium text-gray-800 hover:text-brand-maroon">Contact</Link>
+                                <Link to="/portal" onClick={() => setIsOpen(false)} className="text-lg font-bold text-brand-maroon mt-4">Student Portal</Link>
+                            </div>
+                        </div>
+                    )}
+                </nav>
+            );
+        };
+
+        // --- PAGES ---
+
+        // 1. HOME PAGE
+        const Home = () => {
+            const [notices, setNotices] = useState([]);
+            const [posts, setPosts] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchData = async () => {
+                    try {
+                        const noticesQ = query(collection(db, "notices"), orderBy("date", "desc"), limit(4));
+                        const postsQ = collection(db, "posts");
+                        const [nSnap, pSnap] = await Promise.all([getDocs(noticesQ), getDocs(postsQ)]);
+                        setNotices(nSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                        setPosts(pSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                    } catch(e) { console.error(e); } 
+                    finally { setLoading(false); }
+                };
+                fetchData();
+            }, []);
+
+            return (
+                <div className="animate-fade-in pb-20">
+                    {/* Hero Section */}
+                    <header className="relative h-[650px] flex items-center justify-center overflow-hidden">
+                        <div className="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80')] bg-cover bg-center"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-transparent"></div>
+                        
+                        <div className="relative z-10 container mx-auto px-4 sm:px-6 lg:px-8 text-white pt-20">
+                            <div className="max-w-3xl">
+                                <span className="inline-block py-1 px-3 rounded-full bg-brand-gold/90 text-xs font-bold tracking-widest uppercase mb-6 animate-slide-up">
+                                    Welcome to Excellence
+                                </span>
+                                <h1 className="text-5xl md:text-7xl font-serif font-bold mb-6 leading-tight animate-slide-up" style={{animationDelay: '0.1s'}}>
+                                    The Jamrud <br/>
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-gold to-yellow-200">Model School</span>
+                                </h1>
+                                <p className="text-xl md:text-2xl text-gray-200 mb-10 font-light leading-relaxed animate-slide-up" style={{animationDelay: '0.2s'}}>
+                                    Nurturing future leaders in the heart of Khyber through character, knowledge, and integrity.
+                                </p>
+                                <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{animationDelay: '0.3s'}}>
+                                    <Link to="/contact"><Button variant="primary" icon={ArrowRight} className="w-full sm:w-auto">Admissions Open</Button></Link>
+                                    <Link to="/classes"><Button variant="secondary" className="w-full sm:w-auto bg-transparent border-white text-white hover:bg-white hover:text-brand-maroon">Explore Classes</Button></Link>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* Content Section */}
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-24 relative z-20">
+                        <div className="grid lg:grid-cols-12 gap-8">
+                            
+                            {/* Notice Board */}
+                            <div className="lg:col-span-4">
+                                <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 h-full flex flex-col">
+                                    <div className="bg-gray-900 p-6 text-white flex items-center justify-between">
+                                        <h3 className="font-serif font-bold text-lg flex items-center">
+                                            <Bell className="w-5 h-5 mr-3 text-brand-gold"/> Notice Board
+                                        </h3>
+                                        <span className="relative flex h-3 w-3">
+                                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-gold opacity-75"></span>
+                                          <span className="relative inline-flex rounded-full h-3 w-3 bg-brand-gold"></span>
+                                        </span>
+                                    </div>
+                                    <div className="divide-y divide-gray-100 overflow-y-auto max-h-[500px] flex-1">
+                                        {loading ? <div className="p-8 text-center"><Loader2 className="animate-spin inline text-brand-maroon w-8 h-8"/></div> : notices.length === 0 ? <div className="p-8 text-center text-gray-500">No recent notices.</div> : notices.map(n => (
+                                            <div key={n.id} className="p-6 hover:bg-gray-50 transition-colors group cursor-default">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${n.type==='Urgent'?'bg-red-100 text-red-600':'bg-blue-100 text-blue-600'}`}>{n.type}</span>
+                                                    <span className="text-xs text-gray-400 font-mono">{n.date}</span>
+                                                </div>
+                                                <h4 className="font-bold text-gray-800 mb-1 group-hover:text-brand-maroon transition-colors line-clamp-2">{n.title}</h4>
+                                                <p className="text-xs text-gray-500 flex items-center mt-2"><Users className="w-3 h-3 mr-1"/> {n.ptName}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Excellence Gallery */}
+                            <div className="lg:col-span-8">
+                                <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+                                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+                                        <div>
+                                            <h2 className="text-3xl font-serif font-bold text-gray-900">Gallery of Excellence</h2>
+                                            <p className="text-gray-500 mt-1 text-sm">Celebrating our top achievers and events</p>
+                                        </div>
+                                        <Link to="/exams" className="text-brand-maroon font-semibold text-sm hover:underline flex items-center">Check Result Portal <ArrowRight className="w-4 h-4 ml-1"/></Link>
+                                    </div>
+                                    
+                                    {posts.length === 0 && !loading ? (
+                                        <div className="bg-gray-50 rounded-xl p-12 text-center text-gray-500 border-2 border-dashed border-gray-200">
+                                            <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm"><Award className="w-8 h-8 text-gray-300"/></div>
+                                            No gallery posts available.
+                                        </div>
+                                    ) : (
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            {posts.map(p => (
+                                                <div key={p.id} className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-2xl hover:-translate-y-1 transition-all duration-300">
+                                                    {/* Full Image Display - No Cropping */}
+                                                    <div className="w-full bg-gray-50 border-b">
+                                                        <img 
+                                                            src={p.imageUrl} 
+                                                            className="w-full h-auto object-contain max-h-[500px] mx-auto transition-transform duration-700 group-hover:scale-[1.02]" 
+                                                            alt={p.userName}
+                                                            loading="lazy"
+                                                        />
+                                                    </div>
+                                                    <div className="p-6">
+                                                        <h3 className="font-bold text-lg text-gray-900 mb-1">{p.userName}</h3>
+                                                        <p className="text-xs font-bold text-brand-gold uppercase tracking-wider mb-3">{p.className}</p>
+                                                        <p className="text-sm text-gray-600 leading-relaxed line-clamp-3">{p.details}</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 2. SYLLABUS PAGE
+        const Syllabus = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                getDocs(collection(db, "syllabus")).then(snap => {
+                    setData(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                    setLoading(false);
+                });
+            }, []);
+
+            return (
+                <div className="max-w-5xl mx-auto px-4 py-16 animate-fade-in">
+                    <div className="text-center mb-12">
+                        <span className="bg-brand-maroon/10 text-brand-maroon px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Resources</span>
+                        <h2 className="text-4xl font-serif font-bold text-gray-900 mt-4">Syllabus & Curriculum</h2>
+                    </div>
+                    
+                    {loading ? <div className="flex justify-center"><Loader2 className="animate-spin text-brand-maroon w-10 h-10"/></div> : (
+                        <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100">
+                            {data.length === 0 ? <div className="p-12 text-center text-gray-500">No documents uploaded yet.</div> : (
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-gray-50 border-b border-gray-200">
+                                            <tr>
+                                                <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Document Title</th>
+                                                <th className="p-6 text-xs font-bold text-gray-500 uppercase tracking-wider">Class</th>
+                                                <th className="p-6 text-right text-xs font-bold text-gray-500 uppercase tracking-wider">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                            {data.map(item => (
+                                                <tr key={item.id} className="hover:bg-brand-maroon/5 transition-colors group">
+                                                    <td className="p-6">
+                                                        <div className="flex items-center">
+                                                            <div className="bg-blue-50 p-2 rounded-lg text-blue-600 mr-4 group-hover:bg-white transition-colors shadow-sm"><FileText className="w-5 h-5"/></div>
+                                                            <span className="font-semibold text-gray-800">{item.title}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="p-6 text-sm">
+                                                        <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-medium border border-gray-200">{item.class}</span>
+                                                    </td>
+                                                    <td className="p-6 text-right">
+                                                        <a href={item.link} target="_blank" className="inline-flex items-center text-brand-maroon hover:text-white border border-brand-maroon hover:bg-brand-maroon font-bold text-sm transition-all px-4 py-2 rounded-full">
+                                                            <Download className="w-4 h-4 mr-2"/> PDF
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // 3. RESULTS PAGE
+        const Exams = () => {
+            const [roll, setRoll] = useState('');
+            const [res, setRes] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [err, setErr] = useState('');
+
+            const findResult = async (e) => {
+                e.preventDefault();
+                setLoading(true); setRes(null); setErr('');
+                try {
+                    const q = query(collection(db, "examResults"), where("rollNo", "==", roll));
+                    const snap = await getDocs(q);
+                    if(!snap.empty) setRes(snap.docs[0].data());
+                    else setErr("Result not found. Please check Roll No.");
+                } catch(e) { setErr("Connection error. Try again."); }
+                finally { setLoading(false); }
+            };
+
+            return (
+                <div className="max-w-3xl mx-auto px-4 py-16 animate-fade-in">
+                    <div className="text-center mb-10">
+                        <div className="bg-brand-gold/10 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4 rotate-3 shadow-sm border border-brand-gold/20">
+                            <Award className="w-8 h-8 text-brand-gold"/>
+                        </div>
+                        <h2 className="text-4xl font-serif font-bold text-gray-900">Student Result Portal</h2>
+                        <p className="text-gray-500 mt-2">Enter your roll number to view detailed marks sheet.</p>
+                    </div>
+
+                    <div className="bg-white p-8 md:p-10 rounded-3xl shadow-2xl border border-gray-100 relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-brand-maroon via-brand-gold to-brand-maroon"></div>
+                        
+                        <form onSubmit={findResult} className="relative z-10">
+                            <label className="block text-sm font-bold text-gray-700 mb-2 uppercase tracking-wide">Roll Number</label>
+                            <div className="flex gap-3 mb-6">
+                                <div className="relative flex-1">
+                                    <Search className="absolute left-4 top-3.5 text-gray-400 w-5 h-5"/>
+                                    <input 
+                                        className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-maroon/20 focus:border-brand-maroon transition-all font-mono text-lg" 
+                                        placeholder="e.g. 101" 
+                                        value={roll} 
+                                        onChange={e=>setRoll(e.target.value)} 
+                                        required 
+                                    />
+                                </div>
+                                <Button disabled={loading} className="rounded-xl px-8 shadow-none h-auto">{loading ? <Loader2 className="animate-spin"/> : 'Search'}</Button>
+                            </div>
+                        </form>
+
+                        {err && (
+                            <div className="p-4 bg-red-50 text-red-700 rounded-xl flex items-center animate-fade-in border border-red-100">
+                                <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0"/> {err}
+                            </div>
+                        )}
+                        
+                        {res && (
+                            <div className="mt-8 bg-gray-50 rounded-2xl p-6 md:p-8 animate-slide-up border border-gray-200">
+                                <div className="flex flex-col md:flex-row gap-8 items-center md:items-start text-center md:text-left">
+                                    <div className="relative group">
+                                        <div className="absolute inset-0 bg-brand-gold/20 rounded-full blur-md group-hover:bg-brand-gold/30 transition-all"></div>
+                                        {res.imageUrl ? (
+                                            <img src={res.imageUrl} className="relative w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"/>
+                                        ) : (
+                                            <div className="relative w-32 h-32 bg-white rounded-full flex items-center justify-center shadow-lg text-gray-300 border-4 border-gray-100"><Users className="w-12 h-12"/></div>
+                                        )}
+                                        <div className={`absolute bottom-1 right-1 w-8 h-8 rounded-full flex items-center justify-center border-2 border-white text-white font-bold text-xs shadow-md z-10 ${parseFloat(res.percentage)>=40?'bg-green-500':'bg-red-500'}`}>
+                                            {parseFloat(res.percentage)>=40 ? 'P' : 'F'}
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex-1 w-full">
+                                        <h3 className="text-2xl font-bold text-gray-900 mb-1">{res.name}</h3>
+                                        <p className="text-gray-500 font-medium mb-5 flex justify-center md:justify-start items-center gap-2">
+                                            <span className="bg-white px-3 py-1 rounded border shadow-sm text-sm">Class: {res.className}</span>
+                                            <span className="bg-white px-3 py-1 rounded border shadow-sm text-sm">Roll: {res.rollNo}</span>
+                                        </p>
+                                        
+                                        <div className="grid grid-cols-3 gap-4">
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
+                                                <span className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Total Marks</span>
+                                                <span className="block font-bold text-xl text-gray-800">{res.totalMarks}</span>
+                                            </div>
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-brand-maroon/10 text-center ring-1 ring-brand-maroon/10">
+                                                <span className="block text-[10px] text-brand-maroon uppercase tracking-wider mb-1">Obtained</span>
+                                                <span className="block font-bold text-xl text-brand-maroon">{res.obtainedMarks}</span>
+                                            </div>
+                                            <div className="bg-white p-3 rounded-xl shadow-sm border border-gray-100 text-center">
+                                                <span className="block text-[10px] text-gray-400 uppercase tracking-wider mb-1">Percentage</span>
+                                                <span className={`block font-bold text-xl ${parseFloat(res.percentage)>=40?'text-green-600':'text-red-600'}`}>{res.percentage}%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // 4. DATESHEET PAGE (Table View + File Support)
+        const Datesheet = () => {
+            const [sheets, setSheets] = useState([]);
+            const [loading, setLoading] = useState(true);
+            
+            useEffect(() => {
+                const fetchDatesheets = async () => {
+                    try {
+                        const snap = await getDocs(collection(db, "datesheets"));
+                        setSheets(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                    } catch(e) { console.error(e); } 
+                    finally { setLoading(false); }
+                };
+                fetchDatesheets();
+            }, []);
+
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-16 animate-fade-in">
+                    <div className="text-center mb-12">
+                        <span className="bg-brand-maroon/10 text-brand-maroon px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Schedules</span>
+                        <h2 className="text-4xl font-serif font-bold text-gray-900 mt-4">Exam Datesheets</h2>
+                    </div>
+                    
+                    {loading ? (
+                        <div className="text-center p-10"><Loader2 className="animate-spin w-10 h-10 mx-auto text-brand-maroon"/></div>
+                    ) : sheets.length > 0 ? (
+                         <div className="space-y-12">
+                             {sheets.map(s => (
+                                 <div key={s.id} className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100">
+                                     {/* Header */}
+                                     <div className="p-6 md:p-8 bg-gray-50 border-b border-gray-100 flex flex-col md:flex-row md:justify-between md:items-center">
+                                         <div className="flex items-start md:items-center">
+                                             <div className="bg-white p-3 rounded-xl shadow-sm mr-4 text-brand-maroon">
+                                                <Calendar className="w-6 h-6"/>
+                                             </div>
+                                             <div>
+                                                <h3 className="font-bold text-2xl text-gray-900 mb-1">{s.title}</h3>
+                                                <p className="text-sm text-gray-500 font-medium">Class: {s.class ? s.class : 'General Schedule'}</p>
+                                             </div>
+                                         </div>
+                                         {s.link && !s.exams && (
+                                             <a href={s.link} target="_blank" className="mt-4 md:mt-0 inline-flex items-center px-6 py-3 bg-brand-maroon text-white hover:bg-brand-gold rounded-full transition-all shadow-md text-sm font-bold">
+                                                 <Download className="w-4 h-4 mr-2"/> Download / View PDF
+                                             </a>
+                                         )}
+                                     </div>
+                                     
+                                     {/* Content Area */}
+                                     <div className="w-full">
+                                        {s.exams && Array.isArray(s.exams) && s.exams.length > 0 ? (
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-left">
+                                                    <thead>
+                                                        <tr className="bg-white border-b border-gray-100">
+                                                            <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider pl-8">Date</th>
+                                                            <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Day</th>
+                                                            <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Subject</th>
+                                                            <th className="p-5 text-xs font-bold text-gray-400 uppercase tracking-wider">Time</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-gray-50">
+                                                        {s.exams.map((exam, idx) => (
+                                                            <tr key={idx} className="hover:bg-brand-maroon/5 transition-colors">
+                                                                <td className="p-5 font-bold text-brand-maroon pl-8">{exam.date}</td>
+                                                                <td className="p-5 text-gray-600 font-medium">{exam.day}</td>
+                                                                <td className="p-5 font-bold text-gray-800 text-lg">{exam.subject}</td>
+                                                                <td className="p-5 text-gray-500 flex items-center font-mono text-sm"><Clock className="w-4 h-4 mr-2"/> {exam.time}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        ) : s.link ? (
+                                            <div className="p-16 text-center bg-gray-50/30">
+                                                <div className="bg-white w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm text-gray-300">
+                                                    <FileText className="w-8 h-8"/>
+                                                </div>
+                                                <p className="text-gray-500 mb-6 font-medium">Detailed schedule is available in the attached document.</p>
+                                                <a href={s.link} target="_blank" className="text-brand-maroon font-bold hover:underline">Click here to open file &rarr;</a>
+                                            </div>
+                                        ) : (
+                                            <div className="p-12 text-center text-gray-400 italic">No details provided.</div>
+                                        )}
+                                     </div>
+                                 </div>
+                             ))}
+                         </div>
+                    ) : (
+                        <div className="bg-white p-12 rounded-3xl shadow-lg text-center border border-gray-100">
+                            <div className="bg-gray-50 w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 text-gray-300"><LayoutList className="w-8 h-8"/></div>
+                            <h3 className="text-xl font-bold text-gray-900 mb-2">No Active Datesheets</h3>
+                            <p className="text-gray-500">Please check back later for exam updates.</p>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // 5. CLASSES PAGE
+        const Classes = () => (
+            <div className="max-w-7xl mx-auto px-4 py-16 animate-fade-in">
+                 <div className="text-center mb-16">
+                     <h2 className="text-4xl font-serif font-bold text-gray-900">Academic Programs</h2>
+                     <p className="text-gray-500 mt-2 max-w-2xl mx-auto">Providing a structured learning path from early childhood to matriculation.</p>
+                 </div>
+                 
+                 <div className="grid md:grid-cols-3 gap-8">
+                     {['Playgroup & Nursery', 'Primary (1st - 5th)', 'Middle (6th - 8th)'].map((c, i) => (
+                         <div key={i} className="bg-white p-8 rounded-3xl shadow-lg border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 group relative overflow-hidden">
+                             <div className="absolute top-0 right-0 w-24 h-24 bg-brand-maroon/5 rounded-bl-full -mr-4 -mt-4 transition-transform group-hover:scale-110"></div>
+                             
+                             <div className="w-14 h-14 bg-brand-maroon text-white rounded-2xl flex items-center justify-center mb-6 shadow-lg group-hover:bg-brand-gold transition-colors">
+                                <BookOpen className="w-7 h-7"/>
+                             </div>
+                             <h3 className="font-bold text-2xl mb-3 text-gray-900">{c}</h3>
+                             <p className="text-sm text-gray-500 mb-8 leading-relaxed">Focus on core subjects, moral building, and physical activities designed specifically for this age group.</p>
+                             <Link to="/contact"><span className="text-sm font-bold text-brand-maroon hover:text-brand-gold flex items-center group-hover:translate-x-1 transition-transform">Inquire Admission <ArrowRight className="w-4 h-4 ml-1"/></span></Link>
+                         </div>
+                     ))}
+                     
+                     {/* High School Highlight */}
+                     <div className="md:col-span-3 bg-brand-maroon rounded-3xl p-10 md:p-14 text-center text-white shadow-2xl relative overflow-hidden group mt-4">
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+                        <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent"></div>
+                        
+                        <div className="relative z-10">
+                            <span className="inline-block py-1 px-3 bg-white/20 rounded-full text-xs font-bold mb-4">Science Group</span>
+                            <h3 className="text-3xl md:text-4xl font-serif font-bold mb-4">High School (9th - 10th)</h3>
+                            <p className="text-white/80 max-w-2xl mx-auto mb-8 text-lg">Specialized Science stream preparation with rigorous testing and practical lab work to ensure top grades.</p>
+                            <Link to="/syllabus"><Button variant="accent" className="shadow-xl">View Syllabus & Course</Button></Link>
+                        </div>
+                     </div>
+                 </div>
+            </div>
+        );
+
+        // 6. CONTACT PAGE
+        const Contact = () => {
+            const [sent, setSent] = useState(false);
+            const [val, setVal] = useState({name:'', email:'', msg:''});
+            const send = async (e) => {
+                e.preventDefault();
+                await addDoc(collection(db, "messages"), {...val, date: new Date().toISOString()});
+                setSent(true); setVal({name:'', email:'', msg:''});
+            };
+            return (
+                <div className="max-w-7xl mx-auto px-4 py-16">
+                    <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+                        <div className="bg-white p-8 md:p-12 rounded-3xl shadow-xl border border-gray-100">
+                            <h2 className="text-3xl font-serif font-bold text-gray-900 mb-2">Get in Touch</h2>
+                            <p className="text-gray-500 mb-8">Have questions? We'd love to hear from you.</p>
+                            
+                            <form onSubmit={send} className="space-y-6">
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Your Name</label>
+                                    <input className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-maroon/20 focus:border-brand-maroon outline-none transition-all" placeholder="John Doe" value={val.name} onChange={e=>setVal({...val, name:e.target.value})} required/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
+                                    <input className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-maroon/20 focus:border-brand-maroon outline-none transition-all" placeholder="john@example.com" value={val.email} onChange={e=>setVal({...val, email:e.target.value})} required/>
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-bold text-gray-700 mb-2">Message</label>
+                                    <textarea className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-maroon/20 focus:border-brand-maroon outline-none transition-all resize-none" rows="4" placeholder="How can we help?" value={val.msg} onChange={e=>setVal({...val, msg:e.target.value})} required></textarea>
+                                </div>
+                                <Button className="w-full shadow-lg">{sent ? 'Message Sent Successfully!' : 'Send Message'}</Button>
+                            </form>
+                        </div>
+
+                        <div className="space-y-10">
+                            <div>
+                                <h3 className="text-2xl font-serif font-bold text-gray-900 mb-6">Contact Information</h3>
+                                <div className="space-y-8">
+                                    <div className="flex items-start group">
+                                        <div className="bg-white p-4 rounded-2xl text-brand-maroon shadow-md border border-gray-100 mr-5 group-hover:scale-110 transition-transform"><MapPin className="w-6 h-6"/></div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 text-lg">Our Campus</h4>
+                                            <p className="text-gray-500 mt-1">Jamrud Road, Khyber District,<br/>Khyber Pakhtunkhwa, Pakistan</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start group">
+                                        <div className="bg-white p-4 rounded-2xl text-brand-maroon shadow-md border border-gray-100 mr-5 group-hover:scale-110 transition-transform"><Phone className="w-6 h-6"/></div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 text-lg">Phone</h4>
+                                            <p className="text-gray-500 mt-1">+92 333 9381253</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start group">
+                                        <div className="bg-white p-4 rounded-2xl text-brand-maroon shadow-md border border-gray-100 mr-5 group-hover:scale-110 transition-transform"><Users className="w-6 h-6"/></div>
+                                        <div>
+                                            <h4 className="font-bold text-gray-900 text-lg">Administration</h4>
+                                            <p className="text-gray-500 mt-1">Principal: Tufiq Afridi</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="bg-gradient-to-br from-brand-maroon to-red-900 rounded-3xl p-10 text-white shadow-2xl relative overflow-hidden">
+                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-xl"></div>
+                                <h4 className="font-serif font-bold text-2xl mb-4">Opening Hours</h4>
+                                <ul className="space-y-3 text-white/90 font-medium">
+                                    <li className="flex justify-between border-b border-white/20 pb-2"><span>Mon - Thu</span> <span>08:00 AM - 02:00 PM</span></li>
+                                    <li className="flex justify-between border-b border-white/20 pb-2"><span>Friday</span> <span>08:00 AM - 12:30 PM</span></li>
+                                    <li className="flex justify-between pt-2"><span>Sat - Sun</span> <span className="text-brand-gold">Closed</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // 7. PORTAL PAGE
+        const Portal = () => {
+            const [user, setUser] = useState(null);
+            const [creds, setCreds] = useState({email:'', pass:''});
+            const [err, setErr] = useState('');
+
+            useEffect(() => onAuthStateChanged(auth, u => setUser(u)), []);
+
+            const login = async (e) => {
+                e.preventDefault(); setErr('');
+                try { await signInWithEmailAndPassword(auth, creds.email, creds.pass); }
+                catch(e) { setErr("Invalid credentials. Please try again."); }
+            };
+
+            if(user) return (
+                <div className="min-h-[60vh] flex items-center justify-center px-4">
+                    <div className="bg-white p-12 rounded-3xl shadow-2xl text-center max-w-md w-full border border-gray-100 animate-fade-in">
+                        <div className="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                            <CheckCircle className="w-10 h-10"/>
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-900 mb-2">Welcome Back</h2>
+                        <p className="text-gray-500 mb-8 font-medium">{user.email}</p>
+                        <Button variant="secondary" onClick={()=>signOut(auth)} className="w-full">Sign Out</Button>
+                    </div>
+                </div>
+            );
+
+            return (
+                <div className="min-h-[70vh] flex items-center justify-center px-4 bg-brand-gray/50">
+                    <div className="bg-white p-10 md:p-12 rounded-3xl shadow-2xl max-w-md w-full border border-gray-100 animate-slide-up">
+                        <div className="text-center mb-8">
+                            <div className="inline-block p-4 bg-brand-maroon/5 rounded-full mb-4">
+                                <GraduationCap className="w-10 h-10 text-brand-maroon"/>
+                            </div>
+                            <h2 className="text-3xl font-serif font-bold text-gray-900">Staff Portal</h2>
+                            <p className="text-gray-500 mt-2 text-sm font-medium">Please login to access the dashboard</p>
+                        </div>
+                        
+                        {err && <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm mb-6 text-center border border-red-100 font-medium">{err}</div>}
+                        
+                        <form onSubmit={login} className="space-y-5">
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Email</label>
+                                <input className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-maroon/20 focus:border-brand-maroon outline-none transition-all" type="email" value={creds.email} onChange={e=>setCreds({...creds, email:e.target.value})} required/>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Password</label>
+                                <input className="w-full p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-brand-maroon/20 focus:border-brand-maroon outline-none transition-all" type="password" value={creds.pass} onChange={e=>setCreds({...creds, pass:e.target.value})} required/>
+                            </div>
+                            <Button className="w-full mt-4 shadow-lg">Login</Button>
+                        </form>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- MAIN APP RENDER ---
+        const App = () => {
+            const [loading, setLoading] = useState(true);
+            if(loading) return <SplashScreen onComplete={()=>setLoading(false)}/>;
+
+            return (
+                <BrowserRouter>
+                    <div className="flex flex-col min-h-screen">
+                        <Navbar />
+                        <main className="flex-grow">
+                            <Routes>
+                                <Route path="/" element={<Home />} />
+                                <Route path="/classes" element={<Classes />} />
+                                <Route path="/exams" element={<Exams />} />
+                                <Route path="/syllabus" element={<Syllabus />} />
+                                <Route path="/datesheet" element={<Datesheet />} />
+                                <Route path="/contact" element={<Contact />} />
+                                <Route path="/portal" element={<Portal />} />
+                                <Route path="*" element={<Home />} />
+                            </Routes>
+                        </main>
+                        <footer className="bg-gray-900 text-white py-12 border-t border-gray-800">
+                            <div className="max-w-7xl mx-auto px-4 text-center">
+                                <div className="flex justify-center items-center space-x-2 mb-6 opacity-80">
+                                    <GraduationCap className="w-8 h-8"/>
+                                    <span className="font-serif text-xl font-bold">The Jamrud Model School</span>
+                                </div>
+                                <p className="text-gray-400 text-sm mb-8 max-w-md mx-auto">Dedication to education, character building, and the future of our students.</p>
+                                <div className="border-t border-gray-800 pt-8 text-xs text-gray-500">
+                                    &copy; 2026 The Jamrud Model School. All Rights Reserved.
+                                </div>
+                            </div>
+                        </footer>
+                    </div>
+                </BrowserRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
