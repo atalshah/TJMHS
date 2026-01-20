@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Jamrud Model School</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Merriweather:wght@300;400;700;900&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        jamrud: {
+                            maroon: '#5c0a0a',
+                            sand: '#f3e5ab',
+                            gold: '#d4af37',
+                            green: '#0e3b2e',
+                            light: '#fdfbf7'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Merriweather', 'serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Import Map -->
+    <script type="importmap">
+    {
+        "imports": {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "react-router-dom": "https://esm.sh/react-router-dom@6.22.3?deps=react@18.2.0",
+            "lucide-react": "https://esm.sh/lucide-react@0.344.0?deps=react@18.2.0",
+            "firebase/app": "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js",
+            "firebase/firestore": "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js",
+            "firebase/auth": "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js"
+        }
+    }
+    </script>
+    
+    <!-- Babel -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        body { background-color: #fdfbf7; }
+        .hero-banner {
+            background-image: url("https://images.unsplash.com/photo-1523050854058-8df90110c9f1?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80");
+            background-size: cover;
+            background-position: center;
+        }
+        .splash-overlay {
+            position: fixed; inset: 0; background-color: #ffffff;
+            z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column;
+        }
+    </style>
+</head>
+<body class="text-gray-800 font-sans antialiased flex flex-col min-h-screen">
+    
+    <div id="root"></div>
+
+    <script type="text/babel" data-type="module">
+        import React, { useState, useEffect } from 'react';
+        import { createRoot } from 'react-dom/client';
+        import { BrowserRouter, Routes, Route, Link, useLocation } from 'react-router-dom';
+        import { 
+            LogIn, FileText, Download, Phone, Send, MapPin, 
+            GraduationCap, Menu, X, ChevronDown, Calendar, 
+            BookOpen, Users, Award, Bell, Clock, ArrowRight, Loader2, Search, CheckCircle, AlertCircle, ExternalLink 
+        } from 'lucide-react';
+
+        // --- FIREBASE CONFIG ---
+        import { initializeApp } from 'firebase/app';
+        import { getFirestore, collection, getDocs, query, orderBy, limit, where, addDoc } from 'firebase/firestore';
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from 'firebase/auth';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyA6lWn5wZAPYccdMk103QtV0bqVrWyNhWs",
+            authDomain: "chatting-4e6ae.firebaseapp.com",
+            databaseURL: "https://chatting-4e6ae-default-rtdb.firebaseio.com",
+            projectId: "chatting-4e6ae",
+            storageBucket: "chatting-4e6ae.appspot.com",
+            messagingSenderId: "592640983233",
+            appId: "1:592640983233:web:74dc627588f2b1a3ee9440"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // --- COMPONENTS ---
+
+        const SplashScreen = ({ onComplete }) => {
+            useEffect(() => {
+                const timer = setTimeout(() => onComplete(), 2000);
+                return () => clearTimeout(timer);
+            }, []);
+            return (
+                <div className="splash-overlay animate-pulse">
+                     <GraduationCap className="w-20 h-20 text-jamrud-maroon mb-4" />
+                     <h1 className="text-2xl font-bold text-jamrud-maroon">The Jamrud Model School</h1>
+                     <p className="text-xs text-gray-500 mt-2">Loading Resources...</p>
+                </div>
+            );
+        };
+
+        const Button = ({ children, icon: Icon, variant = 'primary', className = '', ...props }) => {
+            const variants = {
+                primary: "bg-jamrud-maroon text-jamrud-sand hover:bg-jamrud-green hover:text-white",
+                secondary: "bg-white text-jamrud-maroon border border-jamrud-maroon hover:bg-jamrud-sand",
+                accent: "bg-jamrud-gold text-jamrud-maroon hover:bg-yellow-400"
+            };
+            return (
+                <button className={`inline-flex items-center justify-center px-5 py-2.5 rounded-lg font-medium transition-all shadow-sm ${variants[variant]} ${className}`} {...props}>
+                    {Icon && <Icon className="w-4 h-4 mr-2" />} {children}
+                </button>
+            );
+        };
+
+        const Navbar = () => {
+            const [isOpen, setIsOpen] = useState(false);
+            const location = useLocation();
+            
+            const NavLink = ({ to, label }) => (
+                <Link to={to} className={`font-medium hover:text-jamrud-gold ${location.pathname === to ? 'text-jamrud-gold' : 'text-jamrud-sand'}`}>{label}</Link>
+            );
+
+            return (
+                <nav className="sticky top-0 z-50 bg-jamrud-maroon text-jamrud-sand shadow-lg border-b-4 border-jamrud-gold">
+                    <div className="max-w-7xl mx-auto px-4">
+                        <div className="flex items-center justify-between h-20">
+                            <Link to="/" className="flex items-center space-x-3">
+                                <GraduationCap className="w-9 h-9 text-jamrud-gold" />
+                                <div>
+                                    <h1 className="font-serif text-lg md:text-xl font-bold text-white leading-none">THE JAMRUD</h1>
+                                    <span className="text-[10px] uppercase text-jamrud-gold tracking-widest block">Model School</span>
+                                </div>
+                            </Link>
+                            
+                            {/* Desktop */}
+                            <div className="hidden md:flex items-center space-x-6">
+                                <NavLink to="/" label="Home" />
+                                <NavLink to="/classes" label="Classes" />
+                                <NavLink to="/exams" label="Results" />
+                                <NavLink to="/syllabus" label="Syllabus" />
+                                <div className="relative group py-6 cursor-pointer">
+                                    <span className="flex items-center hover:text-jamrud-gold">More <ChevronDown className="w-4 h-4 ml-1"/></span>
+                                    <div className="absolute left-0 top-16 w-48 bg-white rounded-md shadow-xl py-2 hidden group-hover:block border-t-4 border-jamrud-gold">
+                                        <Link to="/datesheet" className="block px-4 py-2 text-gray-800 hover:bg-jamrud-sand text-sm">Datesheet</Link>
+                                        <Link to="/contact" className="block px-4 py-2 text-gray-800 hover:bg-jamrud-sand text-sm">Contact Us</Link>
+                                    </div>
+                                </div>
+                                <Link to="/portal"><Button variant="secondary" className="text-sm py-1 px-3">Portal</Button></Link>
+                            </div>
+
+                            <button onClick={() => setIsOpen(!isOpen)} className="md:hidden text-white"><Menu /></button>
+                        </div>
+                    </div>
+                    {/* Mobile */}
+                    {isOpen && (
+                        <div className="md:hidden bg-jamrud-maroon border-t border-white/10 p-4 space-y-3">
+                            <Link to="/" onClick={() => setIsOpen(false)} className="block text-jamrud-sand">Home</Link>
+                            <Link to="/classes" onClick={() => setIsOpen(false)} className="block text-jamrud-sand">Classes</Link>
+                            <Link to="/exams" onClick={() => setIsOpen(false)} className="block text-jamrud-sand">Results</Link>
+                            <Link to="/syllabus" onClick={() => setIsOpen(false)} className="block text-jamrud-sand">Syllabus</Link>
+                            <Link to="/datesheet" onClick={() => setIsOpen(false)} className="block text-jamrud-sand">Datesheet</Link>
+                            <Link to="/contact" onClick={() => setIsOpen(false)} className="block text-jamrud-sand">Contact</Link>
+                            <Link to="/portal" onClick={() => setIsOpen(false)} className="block text-jamrud-gold font-bold">Student Portal</Link>
+                        </div>
+                    )}
+                </nav>
+            );
+        };
+
+        // --- PAGES ---
+
+        // 1. HOME (Notices & Excellence Posts Dynamic)
+        const Home = () => {
+            const [notices, setNotices] = useState([]);
+            const [posts, setPosts] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                const fetchData = async () => {
+                    try {
+                        const noticesQ = query(collection(db, "notices"), orderBy("date", "desc"), limit(4));
+                        const postsQ = collection(db, "posts");
+                        
+                        const [nSnap, pSnap] = await Promise.all([getDocs(noticesQ), getDocs(postsQ)]);
+                        
+                        setNotices(nSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                        setPosts(pSnap.docs.map(d => ({id: d.id, ...d.data()})));
+                    } catch(e) { console.error(e); } 
+                    finally { setLoading(false); }
+                };
+                fetchData();
+            }, []);
+
+            return (
+                <div className="animate-fade-in">
+                    <header className="hero-banner h-[500px] flex items-end pb-12 px-4 relative">
+                        <div className="absolute inset-0 bg-black/50"></div>
+                        <div className="relative z-10 max-w-7xl mx-auto w-full text-white">
+                            <span className="bg-jamrud-gold text-jamrud-maroon px-3 py-1 rounded font-bold text-xs uppercase mb-3 inline-block">Jamrud, Khyber</span>
+                            <h1 className="text-4xl md:text-6xl font-serif font-bold mb-4">Excellence in Education</h1>
+                            <p className="text-lg opacity-90 mb-6 max-w-xl">Nurturing the future leaders with character and knowledge.</p>
+                            <Link to="/contact"><Button variant="accent" icon={ArrowRight}>Admissions Open</Button></Link>
+                        </div>
+                    </header>
+
+                    <section className="max-w-7xl mx-auto px-4 py-16 grid lg:grid-cols-12 gap-10">
+                        {/* Notices Sidebar */}
+                        <div className="lg:col-span-4">
+                            <div className="bg-white rounded-lg shadow border border-gray-100 overflow-hidden">
+                                <div className="bg-jamrud-maroon p-4 text-white font-bold flex items-center"><Bell className="w-5 h-5 mr-2"/> Notice Board</div>
+                                <div className="divide-y max-h-[400px] overflow-y-auto">
+                                    {loading ? <div className="p-4 text-center"><Loader2 className="animate-spin inline"/></div> : notices.length === 0 ? <div className="p-4 text-gray-500">No notices.</div> : notices.map(n => (
+                                        <div key={n.id} className="p-4 hover:bg-gray-50">
+                                            <div className="flex justify-between mb-1">
+                                                <span className={`text-[10px] px-2 rounded font-bold ${n.type==='Urgent'?'bg-red-100 text-red-600':'bg-blue-50 text-blue-600'}`}>{n.type}</span>
+                                                <span className="text-xs text-gray-400">{n.date}</span>
+                                            </div>
+                                            <h4 className="font-bold text-sm text-gray-800">{n.title}</h4>
+                                            <p className="text-xs text-gray-500 mt-1">By: {n.ptName}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Excellence Gallery (Dynamic) */}
+                        <div className="lg:col-span-8">
+                            <h2 className="text-3xl font-serif font-bold text-jamrud-maroon mb-6">Excellence Gallery</h2>
+                            {posts.length === 0 && !loading ? (
+                                <div className="bg-gray-100 p-8 text-center rounded text-gray-500">No posts added by Admin yet.</div>
+                            ) : (
+                                <div className="grid md:grid-cols-2 gap-6">
+                                    {posts.map(p => (
+                                        <div key={p.id} className="bg-white rounded-lg shadow overflow-hidden group">
+                                            <div className="h-48 overflow-hidden">
+                                                <img src={p.imageUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt={p.userName}/>
+                                            </div>
+                                            <div className="p-4">
+                                                <h3 className="font-bold text-lg">{p.userName}</h3>
+                                                <p className="text-xs font-bold text-jamrud-gold uppercase">{p.className}</p>
+                                                <p className="text-sm text-gray-600 mt-2">{p.details}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </div>
+            );
+        };
+
+        // 2. SYLLABUS (New Dynamic Page)
+        const Syllabus = () => {
+            const [data, setData] = useState([]);
+            const [loading, setLoading] = useState(true);
+
+            useEffect(() => {
+                getDocs(collection(db, "syllabus")).then(snap => {
+                    setData(snap.docs.map(d => ({id: d.id, ...d.data()})));
+                    setLoading(false);
+                });
+            }, []);
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-16 animate-fade-in">
+                    <h2 className="text-3xl font-serif font-bold text-jamrud-maroon mb-6 text-center">Syllabus & Downloads</h2>
+                    {loading ? <div className="text-center"><Loader2 className="animate-spin w-8 h-8 mx-auto"/></div> : (
+                        <div className="bg-white rounded-lg shadow overflow-hidden border border-gray-200">
+                            {data.length === 0 ? <div className="p-8 text-center text-gray-500">No syllabus uploaded yet.</div> : (
+                                <table className="w-full text-left">
+                                    <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+                                        <tr><th className="p-4">Title</th><th className="p-4">Class</th><th className="p-4 text-right">Download</th></tr>
+                                    </thead>
+                                    <tbody className="divide-y">
+                                        {data.map(item => (
+                                            <tr key={item.id} className="hover:bg-gray-50">
+                                                <td className="p-4 font-bold text-gray-800">{item.title}</td>
+                                                <td className="p-4 text-sm text-gray-600">{item.class}</td>
+                                                <td className="p-4 text-right">
+                                                    <a href={item.link} target="_blank" className="inline-flex items-center text-jamrud-maroon hover:text-jamrud-gold font-bold text-sm">
+                                                        <Download className="w-4 h-4 mr-1"/> PDF
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // 3. EXAMS (Result Finder - Dynamic)
+        const Exams = () => {
+            const [roll, setRoll] = useState('');
+            const [res, setRes] = useState(null);
+            const [loading, setLoading] = useState(false);
+            const [err, setErr] = useState('');
+
+            const findResult = async (e) => {
+                e.preventDefault();
+                setLoading(true); setRes(null); setErr('');
+                try {
+                    const q = query(collection(db, "examResults"), where("rollNo", "==", roll));
+                    const snap = await getDocs(q);
+                    if(!snap.empty) setRes(snap.docs[0].data());
+                    else setErr("Result not found. Check Roll No.");
+                } catch(e) { setErr("Error connecting."); }
+                finally { setLoading(false); }
+            };
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-16 animate-fade-in">
+                    <h2 className="text-3xl font-serif font-bold text-jamrud-maroon mb-8 text-center">Result Portal</h2>
+                    <div className="bg-white p-8 rounded-lg shadow-lg border-t-4 border-jamrud-gold">
+                        <form onSubmit={findResult} className="flex gap-4 mb-8">
+                            <input className="flex-1 p-3 border rounded outline-none focus:border-jamrud-maroon" placeholder="Enter Roll Number (e.g. 101)" value={roll} onChange={e=>setRoll(e.target.value)} required />
+                            <Button disabled={loading}>{loading ? <Loader2 className="animate-spin"/> : 'Search'}</Button>
+                        </form>
+
+                        {err && <div className="p-4 bg-red-50 text-red-600 rounded flex items-center"><AlertCircle className="w-5 h-5 mr-2"/> {err}</div>}
+                        
+                        {res && (
+                            <div className="bg-gray-50 p-6 rounded border border-gray-200 animate-slide-up flex flex-col md:flex-row gap-6 items-center">
+                                {res.imageUrl ? <img src={res.imageUrl} className="w-24 h-24 rounded-full object-cover border-4 border-white shadow"/> : <div className="w-24 h-24 bg-gray-200 rounded-full flex items-center justify-center"><Users/></div>}
+                                <div className="flex-1 text-center md:text-left">
+                                    <h3 className="text-2xl font-bold text-jamrud-maroon">{res.name}</h3>
+                                    <p className="text-gray-600 font-mono">Roll No: {res.rollNo} • Class: {res.className}</p>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <div className="bg-white p-2 rounded shadow-sm"><p className="text-xs text-gray-500">Total</p><p className="font-bold">{res.totalMarks}</p></div>
+                                        <div className="bg-white p-2 rounded shadow-sm"><p className="text-xs text-gray-500">Obtained</p><p className="font-bold text-jamrud-maroon">{res.obtainedMarks}</p></div>
+                                        <div className="bg-white p-2 rounded shadow-sm"><p className="text-xs text-gray-500">%</p><p className="font-bold text-green-600">{res.percentage}%</p></div>
+                                    </div>
+                                    <div className={`mt-4 inline-block px-4 py-1 rounded-full text-white font-bold text-sm ${parseFloat(res.percentage)>=40?'bg-green-600':'bg-red-600'}`}>
+                                        {parseFloat(res.percentage)>=40 ? 'PASSED' : 'FAILED'}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        // 4. DATESHEET (Links to Syllabus if dynamic, else static text)
+        const Datesheet = () => {
+            const [sheets, setSheets] = useState([]);
+            
+            // Logic: Check Syllabus collection for items with 'datesheet' in title
+            useEffect(() => {
+                getDocs(collection(db, "syllabus")).then(snap => {
+                    const all = snap.docs.map(d => ({id: d.id, ...d.data()}));
+                    // Filter simply on client side for demo
+                    setSheets(all.filter(i => i.title.toLowerCase().includes('datesheet')));
+                });
+            }, []);
+
+            return (
+                <div className="max-w-4xl mx-auto px-4 py-16 animate-fade-in">
+                    <h2 className="text-3xl font-serif font-bold text-jamrud-maroon mb-6 text-center">Datesheets</h2>
+                    {sheets.length > 0 ? (
+                         <div className="bg-white rounded shadow overflow-hidden">
+                             {sheets.map(s => (
+                                 <div key={s.id} className="p-4 border-b flex justify-between items-center hover:bg-gray-50">
+                                     <div><p className="font-bold">{s.title}</p><p className="text-xs text-gray-500">{s.class}</p></div>
+                                     <a href={s.link} target="_blank" className="text-jamrud-maroon hover:underline flex items-center text-sm font-bold"><Download className="w-4 h-4 mr-1"/> Download</a>
+                                 </div>
+                             ))}
+                         </div>
+                    ) : (
+                        <div className="bg-white p-10 rounded shadow text-center border-t-4 border-gray-400">
+                            <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4"/>
+                            <p className="text-gray-500">No specific datesheet uploaded yet.</p>
+                            <p className="text-sm text-gray-400">Please check the Syllabus section or Notices.</p>
+                            <Link to="/syllabus"><Button variant="secondary" className="mt-4">Go to Syllabus</Button></Link>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        // 5. CLASSES (Static - Explained)
+        const Classes = () => (
+            <div className="max-w-7xl mx-auto px-4 py-16 animate-fade-in text-center">
+                 <h2 className="text-3xl font-serif font-bold text-jamrud-maroon mb-4">Academic Classes</h2>
+                 <p className="text-gray-500 mb-8 max-w-2xl mx-auto">We offer comprehensive education from Playgroup to Matriculation (Science). <br/><span className="text-xs text-red-400">(Note: Class details are static. Use Syllabus page for course content)</span></p>
+                 
+                 <div className="grid md:grid-cols-3 gap-6 text-left">
+                     {['Playgroup & Nursery', 'Primary (1st - 5th)', 'Middle (6th - 8th)', 'High School (9th - 10th)'].map((c, i) => (
+                         <div key={i} className="bg-white p-6 rounded shadow hover:shadow-lg border-t-4 border-jamrud-gold">
+                             <h3 className="font-bold text-lg mb-2">{c}</h3>
+                             <p className="text-sm text-gray-600 mb-4">Focus on core subjects, moral building, and physical activities.</p>
+                             <Link to="/contact"><span className="text-xs font-bold text-jamrud-maroon hover:underline">Inquire Admission &rarr;</span></Link>
+                         </div>
+                     ))}
+                 </div>
+            </div>
+        );
+
+        // 6. CONTACT
+        const Contact = () => {
+            const [sent, setSent] = useState(false);
+            const [val, setVal] = useState({name:'', email:'', msg:''});
+            const send = async (e) => {
+                e.preventDefault();
+                await addDoc(collection(db, "messages"), {...val, date: new Date().toISOString()});
+                setSent(true); setVal({name:'', email:'', msg:''});
+            };
+            return (
+                <div className="max-w-6xl mx-auto px-4 py-16 grid md:grid-cols-2 gap-12">
+                    <div>
+                        <h2 className="text-3xl font-serif font-bold text-jamrud-maroon mb-6">Contact Us</h2>
+                        <form onSubmit={send} className="space-y-4">
+                            <input className="w-full p-3 border rounded outline-none" placeholder="Name" value={val.name} onChange={e=>setVal({...val, name:e.target.value})} required/>
+                            <input className="w-full p-3 border rounded outline-none" placeholder="Email" value={val.email} onChange={e=>setVal({...val, email:e.target.value})} required/>
+                            <textarea className="w-full p-3 border rounded outline-none" rows="4" placeholder="Message" value={val.msg} onChange={e=>setVal({...val, msg:e.target.value})} required></textarea>
+                            <Button>{sent ? 'Sent Successfully!' : 'Send Message'}</Button>
+                        </form>
+                    </div>
+                    <div className="bg-jamrud-maroon text-jamrud-sand p-8 rounded shadow-xl">
+                        <h3 className="font-bold text-xl mb-4 text-white">School Info</h3>
+                        <p className="mb-2">Jamrud Road, Khyber District</p>
+                        <p>+92 333 9381253</p>
+                        <p className="mt-8 text-sm opacity-75">Principal: Tufiq Afridi</p>
+                    </div>
+                </div>
+            );
+        };
+
+        // 7. PORTAL (Auth)
+        const Portal = () => {
+            const [user, setUser] = useState(null);
+            const [creds, setCreds] = useState({email:'', pass:''});
+            const [err, setErr] = useState('');
+
+            useEffect(() => onAuthStateChanged(auth, u => setUser(u)), []);
+
+            const login = async (e) => {
+                e.preventDefault(); setErr('');
+                try { await signInWithEmailAndPassword(auth, creds.email, creds.pass); }
+                catch(e) { setErr("Login Failed"); }
+            };
+
+            if(user) return (
+                <div className="max-w-md mx-auto my-20 p-8 text-center bg-white rounded shadow-lg border-t-4 border-green-600">
+                    <GraduationCap className="w-16 h-16 mx-auto text-green-700 mb-4"/>
+                    <h2 className="text-2xl font-bold">Welcome</h2>
+                    <p className="mb-6">{user.email}</p>
+                    <Button variant="secondary" onClick={()=>signOut(auth)}>Logout</Button>
+                </div>
+            );
+
+            return (
+                <div className="max-w-md mx-auto my-20 bg-white p-8 rounded shadow-lg border-t-4 border-jamrud-maroon">
+                    <h2 className="text-2xl font-bold text-center mb-6">Portal Login</h2>
+                    {err && <div className="text-red-500 text-sm mb-4 text-center">{err}</div>}
+                    <form onSubmit={login} className="space-y-4">
+                        <input className="w-full p-3 border rounded" placeholder="Email" value={creds.email} onChange={e=>setCreds({...creds, email:e.target.value})} required/>
+                        <input className="w-full p-3 border rounded" type="password" placeholder="Password" value={creds.pass} onChange={e=>setCreds({...creds, pass:e.target.value})} required/>
+                        <Button className="w-full">Login</Button>
+                    </form>
+                </div>
+            );
+        };
+
+        // --- MAIN APP ---
+        const App = () => {
+            const [loading, setLoading] = useState(true);
+            if(loading) return <SplashScreen onComplete={()=>setLoading(false)}/>;
+
+            return (
+                <BrowserRouter>
+                    <Navbar />
+                    <main className="flex-grow bg-jamrud-light">
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/classes" element={<Classes />} />
+                            <Route path="/exams" element={<Exams />} />
+                            <Route path="/syllabus" element={<Syllabus />} />
+                            <Route path="/datesheet" element={<Datesheet />} />
+                            <Route path="/contact" element={<Contact />} />
+                            <Route path="/portal" element={<Portal />} />
+                            <Route path="*" element={<Home />} />
+                        </Routes>
+                    </main>
+                    <footer className="bg-gray-900 text-gray-500 py-6 text-center text-sm border-t-4 border-jamrud-gold">
+                        © 2026 The Jamrud Model School. All Rights Reserved.
+                    </footer>
+                </BrowserRouter>
+            );
+        };
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+  </html>
